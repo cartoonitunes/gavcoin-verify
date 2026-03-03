@@ -123,3 +123,38 @@ All versions from 0.1.6 through 0.3.6 compile. Optimized output sizes:
 3. The code generation ordering difference (PUSH20 vs PUSH32 first) may indicate a different compiler version or source structure
 4. Try removing the name() getter and using a simpler implementation
 5. Check if the named(bytes32) getter was implemented differently (inline assembly?)
+
+## BREAKTHROUGH: March 3, 2026 — All Selectors Identified
+
+### Mix Repo Key Findings
+1. `#require` is NOT a preprocessor directive — it's a comment/hint for humans
+2. Mix compiled all project files together via `CompilerStack::addSource()` (multiple sources)
+3. `named`, `coin`, `service` listed as `c_predefinedContracts` but NOT in stdc/std.sol
+4. These contracts must have been in the project directory alongside GavCoin
+
+### Correct Function Names (discovered via keccak4 brute force)
+| Selector | Function | Previous Assumption |
+|----------|----------|---------------------|
+| `06005754` | `nameRegAddress()` | `name()` ❌ |
+| `a550f86d` | `named(bytes32)` | ✓ (correct) |
+| `a6f9dae1` | `changeOwner(address)` | `setOwner(address)` ❌ |
+| `bb34534c` | `addressOf(bytes32)` | ✓ (correct, NameReg call) |
+
+### All 11 Selectors Now Match (sel=3/3 confirmed)
+All BasicCoin + GavCoin function selectors match. The `named` contract used:
+- Constructor: `named(bytes32)` — calls `NameReg.register()`
+- Getter (on GavCoin): `named(bytes32)` — calls `NameReg.addressOf()`
+- Getter (on named): `nameRegAddress()` — returns hardcoded NameReg address
+
+### Current Status
+- Runtime: 2532 chars compiled vs 1810 on-chain (361 bytes too large)
+- Dispatch table structure identical, all selectors in same order
+- Jump destination offsets diverge starting at `mine()` (+74 bytes extra)
+- Compiler version and optimization level TBD — all versions tested (0.1.6-0.3.6)
+- Likely cause: implementation details in sendCoinFrom and mine() that differ
+
+### Next Steps
+1. Disassemble both mine() implementations to find byte-level difference
+2. Try older/different optimizer settings
+3. Consider that sendCoinFrom's sha3 calls may compile differently
+4. Source may have been compiled as MULTIPLE files (not flattened) — try that approach
