@@ -5,8 +5,6 @@ contract owned {
     address owner;
 }
 
-contract NameReg { function addressOf(bytes32 _name) constant returns (address) {} function register(bytes32 _name) {} }
-
 contract named {
     function named(bytes32 _name) {
         NameReg(0x084f6a99003dae6d3906664fdbf43dd09930d0e3).register(_name);
@@ -15,6 +13,10 @@ contract named {
         return NameReg(0x084f6a99003dae6d3906664fdbf43dd09930d0e3);
     }
 }
+
+contract NameReg { function addressOf(bytes32 _name) constant returns (address) {} function register(bytes32 _name) {} }
+
+contract coin { uint tota; }
 
 contract Coin {
     function sendCoinFrom(address _from, uint _val, address _to);
@@ -53,8 +55,9 @@ contract BasicCoin is Coin {
     mapping (address => mapping (address => bool)) m_approved;
 }
 
-contract GavCoin is BasicCoin, named("GavCoin"), owned {
+contract GavCoin is BasicCoin, named("GavCoin"), coin, owned {
     function GavCoin() {
+        m_balances[owner] = tota;
         m_lastNumberMined = block.number;
     }
     function mine() {
