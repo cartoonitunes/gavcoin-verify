@@ -80,3 +80,46 @@ Reconstructed from source analysis:
 2. Compare output bytecode with on-chain bytecode
 3. Iterate on the flattened source structure based on compilation errors and partial matches
 4. Use the creation bytecode for exact matching (includes constructor + runtime)
+
+## Compilation Results (March 3, 2026)
+
+### Key Finding: Partial Match Achieved
+
+Using solc 0.2.0 optimized, the first 79 characters match the on-chain creation bytecode exactly:
+```
+0x60606040527f476176436f696e00000000000000000000000000000000000000000000000000
+```
+
+This confirms:
+1. Constructor pushes "GavCoin" first (named contract runs before coin/owned)
+2. Optimization was enabled
+3. The source structure is approximately correct
+
+### Remaining Differences
+
+**Size gap:** Compiled = 2430 chars, On-chain = 2210 chars (110 bytes too large)
+
+**Divergence at char 79:** The on-chain code uses PUSH20 (address) immediately after "GavCoin", while our compiled output uses PUSH32 (selector) first. This is a code generation ordering difference.
+
+**Storage layout confirmed:** On-chain uses slot 2 for `owner`, matching `BasicCoin, named, owned` without any `coin` state variables. The `coin` base contract either contributes no state or doesn't exist as a separate contract.
+
+**Constructor `m_balances[owner] = tota`**: Since there's no `tota` state variable on-chain, this line was either:
+- Dead code (tota=0, so it's a no-op and the optimizer removed it)
+- A compile-time constant from the preprocessor
+- Simply not present in the actual compiled source
+
+### Versions Tested
+
+All versions from 0.1.6 through 0.3.6 compile. Optimized output sizes:
+- 0.1.6/0.2.0: 2430-2500 chars (closest to target 2210)
+- 0.3.x: 2746-2754 chars (further from target)
+
+**Best candidate: solc 0.2.0 optimized** — closest size match and identical prefix.
+
+### Next Steps
+
+1. The 110-byte gap likely comes from our `named` contract implementation being larger than the original
+2. Need to find/reconstruct the exact preprocessor output for `named()`
+3. The code generation ordering difference (PUSH20 vs PUSH32 first) may indicate a different compiler version or source structure
+4. Try removing the name() getter and using a simpler implementation
+5. Check if the named(bytes32) getter was implemented differently (inline assembly?)
