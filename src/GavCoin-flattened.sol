@@ -1,17 +1,20 @@
 contract owned {
     function owned() { owner = msg.sender; }
     modifier onlyowner { if(msg.sender==owner) _ }
-    function setOwner(address _owner) onlyowner { owner = _owner; }
+    function changeOwner(address _owner) onlyowner { owner = _owner; }
     address owner;
 }
 
-contract NameReg { function addressOf(bytes32 _name) constant returns (address) {} function register(bytes32 _name) {} }
+contract NameReg {
+    function addressOf(bytes32 _name) constant returns (address addr) {}
+    function register(bytes32 _name) {}
+}
 
 contract named {
     function named(bytes32 _name) {
         NameReg(0x084f6a99003dae6d3906664fdbf43dd09930d0e3).register(_name);
     }
-    function name() constant returns (address) {
+    function nameRegAddress() constant returns (address) {
         return NameReg(0x084f6a99003dae6d3906664fdbf43dd09930d0e3);
     }
 }
@@ -56,6 +59,9 @@ contract BasicCoin is Coin {
 contract GavCoin is BasicCoin, named("GavCoin"), owned {
     function GavCoin() {
         m_lastNumberMined = block.number;
+    }
+    function named(bytes32 _name) constant returns (address) {
+        return NameReg(0x084f6a99003dae6d3906664fdbf43dd09930d0e3).addressOf(_name);
     }
     function mine() {
         uint r = block.number - m_lastNumberMined;
