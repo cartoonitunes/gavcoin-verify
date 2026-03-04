@@ -10,8 +10,9 @@ contract GavCoin {
     uint m_lastNumberMined;
 
     function GavCoin() {
-        owner = msg.sender;
         NameReg(nameRegAddress()).register("GavCoin");
+        owner = msg.sender;
+        m_balances[msg.sender] = 1000000;
         m_lastNumberMined = block.number;
     }
 
