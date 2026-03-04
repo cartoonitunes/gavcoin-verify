@@ -93,3 +93,31 @@ If you find the exact compiler version and settings that produce a bytecode matc
 ## Status
 
 **In Progress** — The base contracts (`named`, `coin`) need to be reconstructed from bytecode analysis and the Mix IDE source. The flattened source is a best-effort reconstruction.
+
+## ✅ SOLVED: Exact Runtime Bytecode Match
+
+**Date:** March 3, 2026
+
+After exhaustive analysis, we achieved an **exact byte-for-byte match** of the runtime bytecode.
+
+### Key Findings
+
+1. **No events**: The original contract had zero event declarations. Our early attempts included `Transfer` and `Mined` events which added ~290 bytes.
+
+2. **Flat contract**: No inheritance from `BasicCoin`. Direct implementation.
+
+3. **Storage layout**: `m_balances` (slot 0) → `m_approved` (slot 1) → `owner` (slot 2) → `m_lastNumberMined` (slot 3).
+
+4. **Function order matters**: `changeOwner` must be declared LAST. The Solidity 0.3.x compiler emits a shared return trampoline when it first encounters a function that needs it — `changeOwner` uses this pattern. Moving it last pushes the trampoline to byte 794 (end of code), matching the on-chain layout exactly.
+
+5. **Compiler**: Solidity v0.3.0 through v0.3.2-nightly (any build from this range). Deployed April 26, 2016 — likely compiled with v0.3.1 or a contemporary nightly.
+
+### Verified Source
+
+`src/GavCoin-final.sol` — compiles to exact match with optimizer enabled (`-o 1`).
+
+### Verification
+
+```bash
+node verify.js
+```
